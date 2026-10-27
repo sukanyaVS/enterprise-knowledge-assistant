@@ -524,7 +524,7 @@ wheels = [
 [[package]]
 name = "enterprise-knowledge-assistant"
 version = "0.1.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "chromadb" },
     { name = "fastapi" },
