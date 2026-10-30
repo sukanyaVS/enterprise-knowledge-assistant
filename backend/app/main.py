@@ -3,12 +3,21 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.app.graph.workflow import workflow
+from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI(
     title="Enterprise Knowledge Assistant API",
     description="API for an AI-powered enterprise knowledge assistant.",
     version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
