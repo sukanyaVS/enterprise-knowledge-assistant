@@ -96,3 +96,51 @@
   border-radius: 8px;
   cursor: pointer;
 }
+
+
+.messages-list {
+  width: 100%;
+  max-width: 750px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.message {
+  padding: 16px 20px;
+  border-radius: 12px;
+  max-width: 85%;
+  line-height: 1.6;
+}
+
+.message p {
+  margin-top: 8px;
+  white-space: pre-wrap;
+}
+
+.message.user {
+  align-self: flex-end;
+  background: #dbeafe;
+}
+
+.message.assistant {
+  align-self: flex-start;
+  background: white;
+  border: 1px solid #e5e7eb;
+}
+
+.message small {
+  display: block;
+  margin-top: 10px;
+  color: #b45309;
+}
+
+.error-message {
+  color: #dc2626;
+  padding: 10px 30px;
+}
+
+.chat-input-container button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

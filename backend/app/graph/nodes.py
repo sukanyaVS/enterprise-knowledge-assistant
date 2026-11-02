@@ -129,8 +129,9 @@ def generate_answer(state: AssistantState) -> dict:
     context_parts = []
 
     for document in documents:
-        source = document.metadata.get("source", "Unknown source")
-
+        source_path = document.metadata.get("source", "")
+        source = Path(source_path).name if source_path else "Unknown source"
+        
         context_parts.append(
             f"Source: {source}\n"
             f"Content:\n{document.page_content}"
