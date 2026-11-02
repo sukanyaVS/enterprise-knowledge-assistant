@@ -10,61 +10,81 @@ from backend.app.ingestion.document_loader import load_and_split_document
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-DOCUMENT_PATH = (
-    PROJECT_ROOT / "data" / "raw" / "employee_handbook.txt"
-)
 CHROMA_PATH = PROJECT_ROOT / "chroma_db"
 
 load_dotenv(PROJECT_ROOT / ".env")
 
 
-def create_vector_store():
+def get_vector_store():
+    """Create or connect to the persistent ChromaDB collection."""
+
     embeddings = OpenAIEmbeddings(
         model="text-embedding-3-small"
     )
 
-    vector_store = Chroma(
+    return Chroma(
         collection_name="employee_handbook",
         embedding_function=embeddings,
         persist_directory=str(CHROMA_PATH),
     )
 
-    source = str(DOCUMENT_PATH.resolve())
 
-    chunks = load_and_split_document(source)
+def ingest_document(file_path: str) -> dict:
+    """Load, split, embed, and store a document in ChromaDB."""
 
+    path = Path(file_path).resolve()
+
+    if not path.exists() or not path.is_file():
+        raise FileNotFoundError(f"Document not found: {path}")
+
+    chunks = load_and_split_document(str(path))
+
+    if not chunks:
+        raise ValueError("No readable content found in the document.")
+
+    vector_store = get_vector_store()
+
+    source = str(path)
+
+    # Remove previous chunks if this document was already ingested.
     existing = vector_store.get(
         where={"source": source}
     )
+
     existing_ids = existing.get("ids", [])
 
     if existing_ids:
         vector_store.delete(ids=existing_ids)
 
+    # Generate stable IDs to avoid duplicate chunks on re-ingestion.
     chunk_ids = []
 
     for index, chunk in enumerate(chunks):
         unique_text = f"{source}:{index}:{chunk.page_content}"
+
         chunk_id = hashlib.sha256(
             unique_text.encode("utf-8")
         ).hexdigest()
 
         chunk_ids.append(chunk_id)
 
-    if chunks:
-        vector_store.add_documents(
-            documents=chunks,
-            ids=chunk_ids,
-        )
+    vector_store.add_documents(
+        documents=chunks,
+        ids=chunk_ids,
+    )
 
-    print("Document ingestion completed.")
-    print(f"Chunks processed: {len(chunks)}")
-    print(f"Previous chunks replaced: {len(existing_ids)}")
-    print(f"Chunks currently stored: {vector_store._collection.count()}")
-    print(f"Database location: {CHROMA_PATH}")
-
-    return vector_store
+    return {
+        "filename": path.name,
+        "chunks_processed": len(chunks),
+        "previous_chunks_replaced": len(existing_ids),
+        "total_chunks_in_database": vector_store._collection.count(),
+    }
 
 
 if __name__ == "__main__":
-    create_vector_store()
+    sample_file = PROJECT_ROOT / "data" / "raw" / "employee_handbook.txt"
+
+    result = ingest_document(str(sample_file))
+
+    print("Document ingestion completed.")
+    print(result)
