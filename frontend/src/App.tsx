@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { sendQuestion } from "./api/chat";
+import type { SourceReference } from "./api/chat";
 import type { ChatResponse } from "./api/chat";
 import "./App.css";
 import { uploadDocument } from "./api/documents";
@@ -9,6 +10,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   hasEvidence?: boolean;
+  sources?: SourceReference[];
 }
 
 function App() {
@@ -47,6 +49,7 @@ function App() {
           role: "assistant",
           content: result.answer,
           hasEvidence: result.has_evidence,
+          sources: result.sources,
         },
       ]);
     } catch (err) {
@@ -151,6 +154,27 @@ function App() {
                   </strong>
 
                   <p>{message.content}</p>
+
+                  {message.role === "assistant" &&
+                    message.sources &&
+                    message.sources.length > 0 && (
+                      <div className="message-sources">
+                        <strong>Sources</strong>
+
+                        {message.sources.map((source, sourceIndex) => (
+                          <div
+                            key={`${source.filename}-${source.page ?? "none"}-${sourceIndex}`}
+                            className="source-item"
+                          >
+                            <span>{source.filename}</span>
+
+                            {source.page !== null && (
+                              <span> — Page {source.page}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                   {message.role === "assistant" &&
                     message.hasEvidence === false && (

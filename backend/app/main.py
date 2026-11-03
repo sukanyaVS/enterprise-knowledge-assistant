@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from backend.app.graph.workflow import workflow
 from backend.app.retrieval.vector_store import ingest_document
+from typing import Optional
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -37,10 +38,16 @@ class ChatRequest(BaseModel):
     )
 
 
+class SourceReference(BaseModel):
+    filename: str
+    page: Optional[int] = None
+
+
 class ChatResponse(BaseModel):
     question: str
     answer: str
     has_evidence: bool
+    sources: list[SourceReference] = Field(default_factory=list)
 
 
 @app.get("/")
@@ -68,10 +75,40 @@ def chat(request: ChatRequest):
 
         result = workflow.invoke({"question": question})
 
+        # Extract source references from retrieved documents
+        sources = []
+        seen_sources = set()
+
+        for document in result.get("documents", []):
+            metadata = document.metadata
+
+            source_path = metadata.get("source", "")
+            filename = (
+                Path(source_path).name
+                if source_path
+                else "Unknown"
+            )
+
+            page = metadata.get("page")
+
+            source_key = (filename, page)
+
+            if source_key not in seen_sources:
+                sources.append(
+                    SourceReference(
+                        filename=filename,
+                        page=page,
+                    )
+                )
+                seen_sources.add(source_key)
+
+        has_evidence = result.get("has_evidence", False)
+
         return ChatResponse(
             question=question,
             answer=result.get("answer", ""),
-            has_evidence=result.get("has_evidence", False),
+            has_evidence=has_evidence,
+            sources=sources if has_evidence else [],
         )
 
     except HTTPException:
@@ -82,7 +119,6 @@ def chat(request: ChatRequest):
             status_code=500,
             detail="An error occurred while processing your question.",
         ) from error
-
 
 @app.post("/documents/upload")
 async def upload_document(file: UploadFile = File(...)):

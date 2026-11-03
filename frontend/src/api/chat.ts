@@ -1,10 +1,15 @@
-
 const API_BASE_URL = "http://localhost:8000";
+
+export interface SourceReference {
+  filename: string;
+  page: number | null;
+}
 
 export interface ChatResponse {
   question: string;
   answer: string;
   has_evidence: boolean;
+  sources: SourceReference[];
 }
 
 export async function sendQuestion(
