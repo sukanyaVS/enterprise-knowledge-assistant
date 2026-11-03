@@ -16,7 +16,6 @@ load_dotenv(PROJECT_ROOT / ".env")
 
 
 def get_vector_store():
-    """Create or connect to the persistent ChromaDB collection."""
 
     embeddings = OpenAIEmbeddings(
         model="text-embedding-3-small"

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { sendQuestion } from "./api/chat";
 import type { ChatResponse } from "./api/chat";
 import "./App.css";
+import { uploadDocument } from "./api/documents";
 
 interface Message {
   role: "user" | "assistant";
@@ -15,6 +16,9 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState("");
+  const [uploadError, setUploadError] = useState("");
 
   const handleSubmit = async (
     event: React.FormEvent<HTMLFormElement>
@@ -56,6 +60,35 @@ function App() {
     }
   };
 
+  const handleFileUpload = async (
+  event: React.ChangeEvent<HTMLInputElement>
+) => {
+  const file = event.target.files?.[0];
+
+  if (!file) return;
+
+  setUploading(true);
+  setUploadMessage("");
+  setUploadError("");
+
+  try {
+    const result = await uploadDocument(file);
+
+    setUploadMessage(
+      `${result.filename} uploaded successfully. ${result.chunks_processed} chunks processed.`
+    );
+  } catch (error) {
+    setUploadError(
+      error instanceof Error
+        ? error.message
+        : "Document upload failed."
+    );
+  } finally {
+    setUploading(false);
+    event.target.value = "";
+  }
+};
+
   return (
     <div className="app-container">
       <aside className="sidebar">
@@ -74,6 +107,24 @@ function App() {
         <div className="sidebar-info">
           <p>Enterprise Knowledge Assistant</p>
         </div>
+
+        <div className="document-upload">
+          <label htmlFor="document-upload">
+            {uploading ? "Uploading..." : "Upload Document"}
+          </label>
+
+          <input
+            id="document-upload"
+            type="file"
+            accept=".pdf,.txt"
+            onChange={handleFileUpload}
+            disabled={uploading}
+          />
+
+          {uploadMessage && <p className="upload-success">{uploadMessage}</p>}
+
+          {uploadError && <p className="upload-error">{uploadError}</p>}
+        </div>
       </aside>
 
       <main className="chat-container">
@@ -87,17 +138,14 @@ function App() {
             <div className="welcome-message">
               <h1>How can I help you today?</h1>
               <p>
-                Ask me anything about your company's
-                policies, working hours, leave, and more.
+                Ask me anything about your company's policies, working hours,
+                leave, and more.
               </p>
             </div>
           ) : (
             <div className="messages-list">
               {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`message ${message.role}`}
-                >
+                <div key={index} className={`message ${message.role}`}>
                   <strong>
                     {message.role === "user" ? "You" : "Assistant"}
                   </strong>
@@ -123,10 +171,7 @@ function App() {
 
         {error && <p className="error-message">{error}</p>}
 
-        <form
-          className="chat-input-container"
-          onSubmit={handleSubmit}
-        >
+        <form className="chat-input-container" onSubmit={handleSubmit}>
           <input
             type="text"
             placeholder="Ask a question..."

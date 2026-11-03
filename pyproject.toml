@@ -20,5 +20,6 @@ dependencies = [
     "pydantic-settings>=2.16.1",
     "pypdf>=6.21.2",
     "python-dotenv>=1.2.4",
+    "python-multipart>=0.0.33",
     "uvicorn[standard]>=0.54.0",
 ]
