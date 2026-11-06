@@ -35,6 +35,7 @@ This is a local-development prototype, not a production deployment. In particula
    ```
 
    Add valid `OPENAI_API_KEY` and `LANGSMITH_API_KEY` values to `.env`. Tracing is enabled when the LangSmith key is configured; set `LANGSMITH_TRACING=false` to turn it off.
+   `CHROMA_PATH` optionally selects the local ChromaDB directory; its default is `chroma_db` in the repository root.
 
 2. Install backend dependencies and index the sample handbook:
 

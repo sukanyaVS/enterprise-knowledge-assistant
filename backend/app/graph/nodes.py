@@ -10,11 +10,11 @@ from backend.app.graph.state import AssistantState
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+load_dotenv(PROJECT_ROOT / ".env")
+
 CHROMA_PATH = Path(
     os.getenv("CHROMA_PATH", str(PROJECT_ROOT / "chroma_db"))
 ).resolve()
-
-load_dotenv(PROJECT_ROOT / ".env")
 
 
 def retrieve_documents(state: AssistantState) -> dict:

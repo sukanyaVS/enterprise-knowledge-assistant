@@ -43,6 +43,7 @@ The UI uploads PDF/TXT documents to FastAPI. The loader extracts text and splits
 ## Design decisions and trade-offs
 
 - **ChromaDB** keeps the prototype easy to run locally without provisioning a hosted vector service. It is not configured for multi-user access or production-grade operations.
+- **`CHROMA_PATH`** can be set in `.env` to select the local ChromaDB directory; otherwise the repository-root `chroma_db` directory is used.
 - **OpenAI embeddings and `gpt-4o-mini`** provide a simple single-provider setup. The project requires network access and should only process data approved for that provider.
 - **Evidence-check routing** makes abstention an explicit workflow path rather than relying only on the answer prompt. It adds a model call and should be evaluated for both false accepts and false abstentions.
 - **LangGraph state** carries the question, retrieved `Document` objects, evidence decision, and final answer through the graph. The graph is currently stateless between chat turns.

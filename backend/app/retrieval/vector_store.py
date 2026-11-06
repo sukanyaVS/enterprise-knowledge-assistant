@@ -11,11 +11,11 @@ from backend.app.ingestion.document_loader import load_and_split_document
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+load_dotenv(PROJECT_ROOT / ".env")
+
 CHROMA_PATH = Path(
     os.getenv("CHROMA_PATH", str(PROJECT_ROOT / "chroma_db"))
 ).resolve()
-
-load_dotenv(PROJECT_ROOT / ".env")
 
 
 def get_vector_store():
