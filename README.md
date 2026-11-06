@@ -1,146 +1,95 @@
 # Enterprise Knowledge Assistant
 
-An AI-powered enterprise knowledge assistant built with Python, FastAPI, LangChain, LangGraph, and ChromaDB. The project ingests enterprise documents into a vector store and answers questions using a retrieval-augmented generation (RAG) workflow.
+An AI-powered assistant that answers questions from enterprise documents using retrieval-augmented generation (RAG). It combines a FastAPI backend, a LangGraph workflow, ChromaDB, OpenAI models, LangSmith tracing/evaluation, and a React chat interface.
 
-This repository currently focuses on a sample employee handbook and demonstrates how to turn company knowledge into an assistant that can answer grounded questions using source-backed context.
+## Architecture and design
 
-## Features
+See [the architecture and design decisions](docs/architecture.md) for the workflow diagram, component roles, and rationale. The original drawing is also available at [architecture.drawio.png](docs/architecture.drawio.png).
 
-- Document ingestion and chunking for enterprise knowledge sources
-- Vector search with ChromaDB and OpenAI embeddings
-- LangGraph workflow for document retrieval and answer generation
-- FastAPI application with health checks
-- Persistent local vector database for offline experimentation
+| Area | Choice |
+| --- | --- |
+| Chat model | OpenAI `gpt-4o-mini`, deterministic temperature |
+| Embeddings | OpenAI `text-embedding-3-small` |
+| Vector store | Persistent local ChromaDB |
+| Ingestion | PDF/TXT loaders, 300-character chunks, 50-character overlap |
+| Orchestration | LangGraph retrieval → evidence check → answer or abstain |
+| API | FastAPI |
+| UI | React + TypeScript + Vite |
+| Tracing and evaluation | LangSmith |
 
-## Tech Stack
+This is a local-development prototype, not a production deployment. In particular, uploaded files are stored locally and the application sends retrieved text to the configured OpenAI model. Only index documents that are approved for that service.
 
-- Python 3.12
-- FastAPI
-- LangChain / LangGraph
-- ChromaDB
-- OpenAI embeddings and chat models
-- pydantic-settings and python-dotenv
+## Requirements
 
-## Project Structure
+- Python 3.12+
+- Node.js and npm
+- OpenAI API key
+- LangSmith API key for tracing and evaluation
 
-```text
-.
-├── backend/
-│   └── app/
-│       ├── graph/
-│       │   ├── nodes.py
-│       │   ├── state.py
-│       │   └── workflow.py
-│       ├── ingestion/
-│       │   └── document_loader.py
-│       ├── main.py
-│       └── retrieval/
-│           └── vector_store.py
-├── chroma_db/
-├── data/
-│   └── raw/
-│       └── employee_handbook.txt
-├── .env.example
-├── .env
-├── pyproject.toml
-├── uv.lock
-└── README.md
+## Run locally (Windows PowerShell)
+
+1. Configure keys:
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+   Add valid `OPENAI_API_KEY` and `LANGSMITH_API_KEY` values to `.env`. Tracing is enabled when the LangSmith key is configured; set `LANGSMITH_TRACING=false` to turn it off.
+
+2. Install backend dependencies and index the sample handbook:
+
+   ```powershell
+   uv sync
+   uv run python -m backend.app.retrieval.vector_store
+   ```
+
+3. Start the API in one terminal:
+
+   ```powershell
+   uv run uvicorn backend.app.main:app --reload
+   ```
+
+   The API is at `http://127.0.0.1:8000`; interactive API documentation is at `/docs`.
+
+4. Start the UI in another terminal:
+
+   ```powershell
+   Set-Location frontend
+   npm ci
+   npm run dev
+   ```
+
+   Open the Vite URL (usually `http://localhost:5173`). Ask a question or upload a PDF/TXT file. Answers include source filenames/pages when available, and the assistant abstains when it cannot find sufficient evidence.
+
+## LangSmith evaluation
+
+The small dataset covers answerable policy questions and questions that should be refused. The evaluators score evidence classification and required answer facts/abstention.
+
+```powershell
+uv run python -m backend.evaluation.create_dataset_examples
+uv run python -m backend.evaluation.run_evaluation
 ```
 
-## Getting Started
+The evaluation runner creates a temporary vector store containing only `data/raw/employee_handbook.txt`; it does not use or upload the regular local ChromaDB contents. It enables tracing for the evaluation run. Check the LangSmith project configured by `LANGSMITH_PROJECT` for traces and experiment results. Evaluation scores are simple exact required-fact checks, not a comprehensive semantic quality measure.
 
-### 1) Create the environment file
+## Tests and checks
 
-Copy the example environment file and add your OpenAI API key:
-
-```bash
-cp .env.example .env
+```powershell
+uv run python -m compileall backend
+Set-Location frontend
+npm run lint
+npm run build
 ```
 
-Then update `.env` with your credentials:
+The LangGraph chat and LangSmith evaluation require working OpenAI and LangSmith credentials. Do not run them against unapproved documents.
 
-```env
-OPENAI_API_KEY=your-openai-api-key-here
-LANGSMITH_TRACING=false
-LANGSMITH_API_KEY=
-LANGSMITH_PROJECT=enterprise-knowledge-assistant
-```
+## API endpoints
 
-### 2) Install dependencies
-
-Using `uv` is recommended:
-
-```bash
-uv sync
-```
-
-If you prefer pip instead of `uv`, create a virtual environment and install the dependencies listed in `pyproject.toml` manually.
-
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install fastapi chromadb langchain langchain-chroma langchain-community langchain-openai langchain-text-splitters langgraph langsmith pydantic-settings pypdf python-dotenv uvicorn[standard]
-```
-
-## Ingesting the Knowledge Base
-
-The project includes a vector store builder that loads the employee handbook, splits it into chunks, and stores those chunks in ChromaDB.
-
-Run:
-
-```bash
-uv run python -m backend.app.retrieval.vector_store
-```
-
-This creates or updates the local vector database under the `chroma_db/` directory.
-
-## Running the API
-
-Start the FastAPI app:
-
-```bash
-uv run uvicorn backend.app.main:app --reload
-```
-
-The service exposes the following endpoints:
-
-- `GET /` — welcome message
+- `GET /` — service welcome
 - `GET /health` — health check
+- `POST /chat` — answer a question and return evidence/source references
+- `POST /documents/upload` — ingest one PDF or TXT file (maximum 10 MB)
 
-Example:
+## Sample knowledge source
 
-```bash
-curl http://127.0.0.1:8000/health
-```
-
-## Example RAG Workflow Usage
-
-You can invoke the LangGraph workflow directly from Python:
-
-```python
-from backend.app.graph.workflow import workflow
-
-result = workflow.invoke({"question": "What are the working hours?"})
-print(result["answer"])
-```
-
-This retrieves relevant document chunks from the vector database and generates an answer grounded in the document content.
-
-## Sample Knowledge Source
-
-The default dataset is `data/raw/employee_handbook.txt`, which contains basic HR information such as:
-
-- working hours
-- leave policy
-- remote work guidance
-- IT support process
-
-## Notes
-
-- The assistant is intentionally grounded in the provided knowledge base and should not invent facts.
-- ChromaDB persists data locally, so re-running ingestion can refresh the knowledge base with the latest content.
-- This project is a starter implementation and can be extended to support more enterprise documents, authentication, and multi-document retrieval.
-
-## License
-
-This project is currently unlicensed unless you add a license file or choose an existing license for distribution.
+`data/raw/employee_handbook.txt` contains sample guidance on working hours, leave, remote work, and IT support.

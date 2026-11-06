@@ -1,5 +1,6 @@
 
 import hashlib
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -10,7 +11,9 @@ from backend.app.ingestion.document_loader import load_and_split_document
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-CHROMA_PATH = PROJECT_ROOT / "chroma_db"
+CHROMA_PATH = Path(
+    os.getenv("CHROMA_PATH", str(PROJECT_ROOT / "chroma_db"))
+).resolve()
 
 load_dotenv(PROJECT_ROOT / ".env")
 

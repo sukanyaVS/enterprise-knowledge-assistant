@@ -1,5 +1,6 @@
 
 from pathlib import Path
+import os
 
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
@@ -9,7 +10,9 @@ from backend.app.graph.state import AssistantState
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-CHROMA_PATH = PROJECT_ROOT / "chroma_db"
+CHROMA_PATH = Path(
+    os.getenv("CHROMA_PATH", str(PROJECT_ROOT / "chroma_db"))
+).resolve()
 
 load_dotenv(PROJECT_ROOT / ".env")
 
